@@ -1,18 +1,20 @@
 #[cfg(test)]
 mod integration_tests {
     use tiko::{
-        api::fetch_tikwm_task_id, api::fetch_video_url, api::get_video_url, parser::VideoInfo,
+        api::{fetch_tikwm_task_id, fetch_video_url, get_video_url},
+        parser::TiktokInfo,
+        types::ItemType,
     };
     use tokio;
 
     const TEST_VIDEO_ID: &str = "7571521498322652434";
     const TEST_TASK_ID: &str = "a3543cd644e7402dd6f0a002eefa1823";
 
-    fn create_test_video_info() -> VideoInfo {
-        VideoInfo {
+    fn create_test_video_info() -> TiktokInfo {
+        TiktokInfo {
             username: String::from("testuser"),
-            video_id: String::from(TEST_VIDEO_ID),
-            item_type: String::from("video"),
+            tiktok_id: String::from(TEST_VIDEO_ID),
+            item_type: ItemType::Video,
         }
     }
 
@@ -39,7 +41,7 @@ mod integration_tests {
     async fn test_full_get_video_url_success() {
         let video_info = create_test_video_info();
 
-        let result = fetch_video_url(TEST_TASK_ID, &video_info.video_id).await;
+        let result = fetch_video_url(TEST_TASK_ID, &video_info.tiktok_id).await;
         assert!(result.is_ok(), "api requisiton failed: {:?}", result.err());
 
         let video_url = result.unwrap();

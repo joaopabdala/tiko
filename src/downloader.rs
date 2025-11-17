@@ -5,11 +5,11 @@ use reqwest::Client;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-use crate::parser::VideoInfo;
+use crate::parser::TiktokInfo;
 
 pub async fn download_video_from_url(
     video_url: String,
-    video_info: &VideoInfo,
+    video_info: &TiktokInfo,
 ) -> Result<(), Box<dyn Error>> {
     let client = Client::new();
 
@@ -19,11 +19,8 @@ pub async fn download_video_from_url(
     if !status.is_success() {
         return Err(format!("Failed to download video. HTTP status: {}", status).into());
     }
-    eprintln!(
-        "download started for {}_{}",
-        video_info.username, video_info.video_id
-    );
-    let filename = format!("{}_{}.mp4", video_info.username, video_info.video_id);
+    let filename = format!("{}_{}.mp4", video_info.username, video_info.tiktok_id);
+    eprintln!("download started for {}", filename);
     let mut file = File::create(&filename).await?;
     let mut stream = response.bytes_stream();
 
@@ -35,17 +32,48 @@ pub async fn download_video_from_url(
     Ok(())
 }
 
+pub async fn download_photos_from_url(
+    photos_urls: Vec<String>,
+    tiktok_info: &TiktokInfo,
+) -> Result<(), Box<dyn Error>> {
+    let client = Client::new();
+    for (index, photo_url) in photos_urls.iter().enumerate() {
+        let response = client.get(photo_url).send().await?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(format!("Failed to download video. HTTP status: {}", status).into());
+        }
+        let filename = format!(
+            "{}_{}_{}.jpeg",
+            tiktok_info.username,
+            tiktok_info.tiktok_id,
+            index + 1
+        );
+        eprintln!("download started for {}", filename);
+
+        let mut file = File::create(&filename).await?;
+        let mut stream = response.bytes_stream();
+
+        while let Some(chunk) = stream.next().await {
+            file.write_all(&chunk?).await?;
+        }
+        eprintln!("Download finished for {}", filename);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::VideoInfo;
+    use crate::{parser::TiktokInfo, types::ItemType};
     use tokio::io::AsyncReadExt;
 
-    fn create_test_info() -> VideoInfo {
-        VideoInfo {
+    fn create_test_info() -> TiktokInfo {
+        TiktokInfo {
             username: String::from("test_user"),
-            video_id: String::from("12345"),
-            item_type: String::from("video"),
+            tiktok_id: String::from("12345"),
+            item_type: ItemType::Video,
         }
     }
 
@@ -53,7 +81,7 @@ mod tests {
     async fn test_download_video_success() {
         let test_data = b"This is the fake video content";
         let video_info = create_test_info();
-        let expected_filename = format!("{}_{}.mp4", video_info.username, video_info.video_id);
+        let expected_filename = format!("{}_{}.mp4", video_info.username, video_info.tiktok_id);
 
         let mut server = mockito::Server::new_async().await;
 
