@@ -10,7 +10,7 @@ use crate::parser::TiktokInfo;
 pub async fn download_video_from_url(
     video_url: String,
     video_info: &TiktokInfo,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), Box<dyn Error + Send + Sync>> {
     let client = Client::new();
 
     let response = client.get(&video_url).send().await?;
@@ -35,7 +35,7 @@ pub async fn download_video_from_url(
 pub async fn download_photos_from_url(
     photos_urls: Vec<String>,
     tiktok_info: &TiktokInfo,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), Box<dyn Error + Send + Sync>> {
     let client = Client::new();
     for (index, photo_url) in photos_urls.iter().enumerate() {
         let response = client.get(photo_url).send().await?;

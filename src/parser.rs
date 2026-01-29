@@ -12,7 +12,7 @@ pub struct TiktokInfo {
     pub item_type: ItemType,
 }
 
-pub fn parse_tiktok_url(video_url: &str) -> Result<TiktokInfo, Box<dyn Error>> {
+pub fn parse_tiktok_url(video_url: &str) -> Result<TiktokInfo, Box<dyn Error + Send + Sync>> {
     lazy_static! {
         static ref TIKTOK_REGEX: Regex =
             Regex::new(r"tiktok\.com/@(?P<user>[^/]+)/(?P<type>[a-z]+)/(?P<id>\d+)").unwrap();
