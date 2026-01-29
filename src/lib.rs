@@ -20,28 +20,51 @@ pub async fn download_from_url(
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     let tiktok_info: TiktokInfo = parse_tiktok_url(tiktok_url)?;
 
-    let permit = sem.acquire().await.unwrap();
+    let mut attempts = 0;
+    let max_retries = 3;
 
-    match tiktok_info.item_type {
-        ItemType::Video => {
-            let video_url = get_video_url(&tiktok_info).await?;
-            sleep(Duration::from_secs(1)).await;
-            drop(permit);
+    let result = loop {
+        let permit = sem.acquire().await.unwrap();
 
-            download_video_from_url(video_url, &tiktok_info).await?;
-        }
-        ItemType::Photo => {
-            let photos_urls = get_photos_url(&tiktok_info).await?;
-            sleep(Duration::from_secs(1)).await;
-            drop(permit);
+        let outcome = match tiktok_info.item_type {
+            ItemType::Video => get_video_url(&tiktok_info).await.map(DownloadTarget::Video),
+            ItemType::Photo => get_photos_url(&tiktok_info)
+                .await
+                .map(DownloadTarget::Photos),
+            ItemType::Unknown => {
+                drop(permit);
+                return Ok(());
+            }
+        };
 
-            download_photos_from_url(photos_urls, &tiktok_info).await?;
+        match outcome {
+            Ok(target) => {
+                sleep(Duration::from_secs(1)).await;
+                drop(permit);
+                break target;
+            }
+            Err(e) if attempts < max_retries => {
+                attempts += 1;
+                eprintln!(
+                    "Attempt {}/{} failed: {} for {}. Trying again in 2s...",
+                    attempts, max_retries, tiktok_url, e
+                );
+                drop(permit);
+                sleep(Duration::from_secs(2)).await;
+            }
+            Err(e) => return Err(e),
         }
-        ItemType::Unknown => {
-            drop(permit);
-            eprintln!("Tipo desconhecido.");
-        }
+    };
+
+    match result {
+        DownloadTarget::Video(url) => download_video_from_url(url, &tiktok_info).await?,
+        DownloadTarget::Photos(urls) => download_photos_from_url(urls, &tiktok_info).await?,
     }
 
     Ok(())
+}
+
+enum DownloadTarget {
+    Video(String),
+    Photos(Vec<String>),
 }
