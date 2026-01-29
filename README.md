@@ -31,12 +31,12 @@ To run Tiko from any directory without typing `./tiko` every time, move the bina
 
 ## 📖 Usage
 
-To download a video, simply execute the `tiko` command followed by the full TikTok video URL.
+To download videos or photos, execute the `tiko` command followed by the TikTok URLs separated by spaces.
 
 ### Syntax
 
 ```bash
-tiko <TIKTOK_URL>
+tiko <URL_1> <URL_2> <URL_3>
 ```
 
 ### Example
