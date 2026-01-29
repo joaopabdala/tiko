@@ -26,8 +26,10 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
     }
 
     while let Some(res) = set.join_next().await {
-        if let Err(e) = res? {
-            eprintln!("Error downloading: {}", e);
+        match res {
+            Ok(Err(e)) => eprintln!("Download failed: {e}"),
+            Err(e) => eprintln!("Task panicked: {e}"),
+            _ => {}
         }
     }
 
