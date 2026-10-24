@@ -10,6 +10,7 @@ use crate::parser::TiktokInfo;
 pub async fn download_video_from_url(
     video_url: String,
     video_info: &TiktokInfo,
+    low_quality: bool,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     let client = Client::new();
 
@@ -19,7 +20,11 @@ pub async fn download_video_from_url(
     if !status.is_success() {
         return Err(format!("Failed to download video. HTTP status: {}", status).into());
     }
-    let filename = format!("{}_{}.mp4", video_info.username, video_info.tiktok_id);
+    let quality_flag = if low_quality { "_lq" } else { "" };
+    let filename = format!(
+        "{}_{}{}.mp4",
+        video_info.username, video_info.tiktok_id, quality_flag
+    );
     eprintln!("download started for {}", filename);
     let mut file = File::create(&filename).await?;
     let mut stream = response.bytes_stream();
@@ -93,7 +98,7 @@ mod tests {
 
         let mock_url = format!("{}/video.mp4", server.url());
 
-        let result = download_video_from_url(mock_url, &video_info).await;
+        let result = download_video_from_url(mock_url, &video_info, false).await;
 
         assert!(result.is_ok(),);
 
@@ -104,6 +109,31 @@ mod tests {
         downloaded_file.read_to_end(&mut contents).await.unwrap();
 
         assert_eq!(contents, test_data.to_vec(),);
+
+        tokio::fs::remove_file(expected_filename).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_download_low_quality_video_is_flagged() {
+        let mut video_info = create_test_info();
+        video_info.tiktok_id = String::from("67890");
+        let expected_filename = format!("{}_{}_lq.mp4", video_info.username, video_info.tiktok_id);
+
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server
+            .mock("GET", "/video.mp4")
+            .with_status(200)
+            .with_body(b"low quality")
+            .create();
+
+        let mock_url = format!("{}/video.mp4", server.url());
+
+        let result = download_video_from_url(mock_url, &video_info, true).await;
+
+        assert!(result.is_ok());
+        mock.assert();
+        assert!(tokio::fs::metadata(&expected_filename).await.is_ok());
 
         tokio::fs::remove_file(expected_filename).await.unwrap();
     }
@@ -123,7 +153,7 @@ mod tests {
 
         let mock_url = format!("{}/video.mp4", server.url());
 
-        let result = download_video_from_url(mock_url, &video_info).await;
+        let result = download_video_from_url(mock_url, &video_info, false).await;
 
         assert!(result.is_err());
 

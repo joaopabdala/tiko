@@ -2,6 +2,7 @@ use clap::Parser;
 use std::sync::Arc;
 use std::{error::Error, process};
 use tiko::download_from_url;
+use tiko::parser::split_tiktok_urls;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 
@@ -20,7 +21,14 @@ async fn run(args: Args) -> Result<(), Box<dyn Error>> {
 
     let semaphore = Arc::new(Semaphore::new(1));
 
-    for url in args.links {
+    let urls: Vec<String> = args
+        .links
+        .iter()
+        .flat_map(|link| split_tiktok_urls(link))
+        .map(String::from)
+        .collect();
+
+    for url in urls {
         let semaphore = Arc::clone(&semaphore);
         set.spawn(async move { download_from_url(&url, semaphore).await });
     }
