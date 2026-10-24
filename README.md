@@ -41,13 +41,13 @@ tiko <URL_1> <URL_2> <URL_3>
 
 ### Example
 
-The video will be downloaded to your **current working directory** and named based on the username and video ID (e.g., `user012147011_7571521498322652434.mp4`).
+The video will be downloaded to your **current working directory** and named based on the username and video ID (e.g., `some_user_1234567890123456789.mp4`).
 
 ```bash
-$ tiko https://www.tiktok.com/@user012147011/video/7571521498322652434
+$ tiko https://www.tiktok.com/@some_user/video/1234567890123456789
 
-📥 Download started for user012147011_7571521498322652434
-✅ Download finished 'user012147011_7571521498322652434.mp4'.
+📥 Download started for some_user_1234567890123456789
+✅ Download finished 'some_user_1234567890123456789.mp4'.
 ```
 
 -----
